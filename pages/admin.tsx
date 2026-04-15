@@ -6,36 +6,31 @@ export default function Admin() {
   const [descricao, setDescricao] = useState('')
   const [senha, setSenha] = useState('')
   const [datas, setDatas] = useState(['', ''])
+  const [horas, setHoras] = useState([''])
   const [estado, setEstado] = useState<'idle' | 'enviando' | 'sucesso' | 'erro'>('idle')
   const [mensagem, setMensagem] = useState('')
 
-  function adicionarData() {
-    setDatas([...datas, ''])
-  }
+  function adicionarData() { setDatas([...datas, '']) }
+  function removerData(i: number) { setDatas(datas.filter((_, idx) => idx !== i)) }
+  function atualizarData(i: number, val: string) { const n = [...datas]; n[i] = val; setDatas(n) }
 
-  function removerData(i: number) {
-    setDatas(datas.filter((_, idx) => idx !== i))
-  }
-
-  function atualizarData(i: number, val: string) {
-    const novas = [...datas]
-    novas[i] = val
-    setDatas(novas)
-  }
+  function adicionarHora() { setHoras([...horas, '']) }
+  function removerHora(i: number) { setHoras(horas.filter((_, idx) => idx !== i)) }
+  function atualizarHora(i: number, val: string) { const n = [...horas]; n[i] = val; setHoras(n) }
 
   async function criar() {
     const datasValidas = datas.filter(d => d.trim() !== '')
+    const horasValidas = horas.filter(h => h.trim() !== '')
     if (!titulo.trim() || datasValidas.length < 2 || !senha) {
       setEstado('erro')
       setMensagem('Preenche o título, a senha e pelo menos 2 datas.')
       return
     }
-
     setEstado('enviando')
     const res = await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ titulo, descricao, datas: datasValidas, senha }),
+      body: JSON.stringify({ titulo, descricao, datas: datasValidas, horas: horasValidas, senha }),
     })
     const data = await res.json()
     if (data.ok) {
@@ -56,15 +51,15 @@ export default function Admin() {
     .card { background: white; border-radius: 14px; padding: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
     .campo { margin-bottom: 1.25rem; }
     label { display: block; font-size: 13px; font-weight: 500; color: #444; margin-bottom: 6px; }
-    input[type=text], input[type=password], input[type=date], textarea { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; font-family: inherit; transition: border 0.15s; }
+    input[type=text], input[type=password], input[type=date], input[type=time], textarea { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; font-family: inherit; transition: border 0.15s; }
     input:focus, textarea:focus { border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,0.15); }
     textarea { resize: vertical; min-height: 72px; }
-    .data-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-    .data-row input { flex: 1; }
+    .row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .row input { flex: 1; }
     .btn-remover { background: none; border: 1px solid #ddd; border-radius: 6px; width: 32px; height: 38px; cursor: pointer; color: #999; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .btn-remover:hover { background: #fff0f0; border-color: #f5c0c0; color: #c00; }
     .btn-add { background: none; border: 1px dashed #ccc; border-radius: 8px; padding: 8px 14px; font-size: 13px; color: #888; cursor: pointer; width: 100%; margin-top: 4px; }
-    .btn-add:hover { background: #f8f8f8; border-color: #aaa; }
+    .btn-add:hover { background: #f8f8f8; }
     .btn-criar { width: 100%; padding: 13px; background: #7F77DD; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 1.5rem; transition: background 0.15s; }
     .btn-criar:hover:not(:disabled) { background: #6b63cc; }
     .btn-criar:disabled { opacity: 0.6; cursor: default; }
@@ -74,6 +69,7 @@ export default function Admin() {
     .link-box { background: #f8f7ff; border: 1px solid #d4d1f5; border-radius: 8px; padding: 12px 16px; margin-top: 1rem; word-break: break-all; font-size: 14px; color: #534AB7; font-family: monospace; }
     .divider { border: none; border-top: 1px solid #f0f0f0; margin: 1.5rem 0; }
     .hint { font-size: 12px; color: #999; margin-top: 4px; }
+    .opcional { font-size: 11px; color: #aaa; font-weight: 400; margin-left: 4px; }
   `
 
   return (
@@ -95,53 +91,47 @@ export default function Admin() {
           </div>
 
           <div className="campo">
-            <label>Descrição (opcional)</label>
+            <label>Descrição <span className="opcional">(opcional)</span></label>
             <textarea placeholder="Ex: Vamos votar o melhor dia para a nossa próxima reunião." value={descricao} onChange={e => setDescricao(e.target.value)} />
           </div>
 
           <hr className="divider" />
 
           <div className="campo">
-            <label>Datas disponíveis (mínimo 2)</label>
+            <label>Datas disponíveis <span className="opcional">(mínimo 2)</span></label>
             {datas.map((d, i) => (
-              <div className="data-row" key={i}>
-                <input
-                  type="date"
-                  value={d}
-                  onChange={e => atualizarData(i, e.target.value)}
-                />
-                {datas.length > 2 && (
-                  <button className="btn-remover" onClick={() => removerData(i)}>×</button>
-                )}
+              <div className="row" key={i}>
+                <input type="date" value={d} onChange={e => atualizarData(i, e.target.value)} />
+                {datas.length > 2 && <button className="btn-remover" onClick={() => removerData(i)}>×</button>}
               </div>
             ))}
             <button className="btn-add" onClick={adicionarData}>+ Adicionar outra data</button>
+          </div>
+
+          <div className="campo">
+            <label>Horários disponíveis <span className="opcional">(opcional)</span></label>
+            {horas.map((h, i) => (
+              <div className="row" key={i}>
+                <input type="time" value={h} onChange={e => atualizarHora(i, e.target.value)} />
+                {horas.length > 1 && <button className="btn-remover" onClick={() => removerHora(i)}>×</button>}
+              </div>
+            ))}
+            <button className="btn-add" onClick={adicionarHora}>+ Adicionar outro horário</button>
+            <p className="hint">Se não adicionares horários, a votação será só por datas.</p>
           </div>
 
           <hr className="divider" />
 
           <div className="campo">
             <label>Senha de administrador</label>
-            <input
-              type="password"
-              placeholder="Deve ser igual à variável ADMIN_SENHA no Vercel"
-              value={senha}
-              onChange={e => setSenha(e.target.value)}
-            />
-            <p className="hint">Vai a Vercel → Settings → Environment Variables → adiciona ADMIN_SENHA</p>
+            <input type="password" placeholder="Deve ser igual à variável ADMIN_SENHA no Vercel" value={senha} onChange={e => setSenha(e.target.value)} />
           </div>
 
-          <button
-            className="btn-criar"
-            onClick={criar}
-            disabled={estado === 'enviando'}
-          >
+          <button className="btn-criar" onClick={criar} disabled={estado === 'enviando'}>
             {estado === 'enviando' ? 'A criar...' : 'Criar votação'}
           </button>
 
-          {estado === 'erro' && (
-            <div className="alerta alerta-erro">{mensagem}</div>
-          )}
+          {estado === 'erro' && <div className="alerta alerta-erro">{mensagem}</div>}
 
           {estado === 'sucesso' && (
             <>
