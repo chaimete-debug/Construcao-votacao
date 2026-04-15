@@ -5,6 +5,7 @@ interface Voto {
   nome: string
   data: string
   hora: string
+  local: string
   timestamp: string
 }
 
@@ -12,6 +13,7 @@ interface Config {
   titulo: string
   datas: string[]
   horas: string[]
+  locais: string[]
 }
 
 function formatarData(iso: string) {
@@ -22,19 +24,59 @@ function formatarData(iso: string) {
   return `${dias[d.getDay()]}, ${dia} de ${meses[Number(mes) - 1]}`
 }
 
+function Bloco({ titulo, icone, itens, votos, campo }: {
+  titulo: string, icone: string,
+  itens: string[], votos: Voto[], campo: 'data' | 'hora' | 'local'
+}) {
+  const contagem: Record<string, Voto[]> = {}
+  itens.forEach(i => { contagem[i] = [] })
+  votos.forEach(v => { const k = v[campo]; if (k && contagem[k]) contagem[k].push(v) })
+  const max = Math.max(...Object.values(contagem).map(v => v.length), 1)
+  const ordenados = Object.entries(contagem).sort((a, b) => b[1].length - a[1].length)
+
+  return (
+    <>
+      <h2>{icone} {titulo}</h2>
+      {ordenados.map(([item, votantes]) => {
+        const eVencedor = votantes.length === max && votantes.length > 0
+        const pct = max > 0 ? (votantes.length / max) * 100 : 0
+        const label = campo === 'data' ? formatarData(item) : item
+        return (
+          <div className="card" key={item}>
+            <div className="item-header">
+              <span className={`item-nome${eVencedor ? ' vencedor' : ''}`}>
+                {label}
+                {eVencedor && <span className="vencedor-badge">★ A ganhar</span>}
+              </span>
+              <span className="contagem">{votantes.length} {votantes.length === 1 ? 'voto' : 'votos'}</span>
+            </div>
+            <div className="barra-bg">
+              <div className={`barra${eVencedor ? ' vencedor' : ''}`} style={{ width: `${pct}%` }} />
+            </div>
+            <div className="votantes">
+              {votantes.length === 0
+                ? <span style={{ fontSize: 12, color: '#bbb' }}>Nenhum voto ainda</span>
+                : votantes.map(v => <span className="votante" key={v.nome}>{v.nome}</span>)
+              }
+            </div>
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
 export default function Resultados() {
   const [votos, setVotos] = useState<Voto[]>([])
   const [config, setConfig] = useState<Config | null>(null)
   const [carregando, setCarregando] = useState(true)
 
   function carregar() {
-    fetch('/api/votos')
-      .then(r => r.json())
-      .then(d => {
-        setVotos(d.votos || [])
-        setConfig(d.config)
-        setCarregando(false)
-      })
+    fetch('/api/votos').then(r => r.json()).then(d => {
+      setVotos(d.votos || [])
+      setConfig(d.config)
+      setCarregando(false)
+    })
   }
 
   useEffect(() => {
@@ -43,29 +85,12 @@ export default function Resultados() {
     return () => clearInterval(t)
   }, [])
 
-  const contagemDatas: Record<string, Voto[]> = {}
-  if (config) {
-    config.datas.forEach(d => { contagemDatas[d] = [] })
-    votos.forEach(v => { if (contagemDatas[v.data]) contagemDatas[v.data].push(v) })
-  }
-
-  const contagemHoras: Record<string, Voto[]> = {}
-  if (config?.horas?.length) {
-    config.horas.forEach(h => { contagemHoras[h] = [] })
-    votos.forEach(v => { if (v.hora && contagemHoras[v.hora]) contagemHoras[v.hora].push(v) })
-  }
-
-  const maxDatas = Math.max(...Object.values(contagemDatas).map(v => v.length), 1)
-  const maxHoras = Math.max(...Object.values(contagemHoras).map(v => v.length), 1)
-  const datasOrdenadas = config ? Object.entries(contagemDatas).sort((a, b) => b[1].length - a[1].length) : []
-  const horasOrdenadas = config?.horas?.length ? Object.entries(contagemHoras).sort((a, b) => b[1].length - a[1].length) : []
-
   const estilos = `
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; padding: 1.5rem 1rem; }
     .container { max-width: 520px; margin: 0 auto; }
     h1 { font-size: 22px; font-weight: 600; color: #111; margin-bottom: 0.25rem; }
-    h2 { font-size: 16px; font-weight: 600; color: #333; margin: 1.5rem 0 0.75rem; }
+    h2 { font-size: 15px; font-weight: 600; color: #555; margin: 1.5rem 0 0.75rem; }
     .subtitulo { font-size: 14px; color: #888; margin-bottom: 2rem; }
     .card { background: white; border-radius: 14px; padding: 1.5rem; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
     .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -116,61 +141,9 @@ export default function Resultados() {
 
             <button className="btn-atualizar" onClick={carregar}>↻ Atualizar agora</button>
 
-            <h2>📅 Datas</h2>
-            {datasOrdenadas.map(([data, votantes]) => {
-              const eVencedor = votantes.length === maxDatas && votantes.length > 0
-              const pct = maxDatas > 0 ? (votantes.length / maxDatas) * 100 : 0
-              return (
-                <div className="card" key={data}>
-                  <div className="item-header">
-                    <span className={`item-nome${eVencedor ? ' vencedor' : ''}`}>
-                      {formatarData(data)}
-                      {eVencedor && <span className="vencedor-badge">★ A ganhar</span>}
-                    </span>
-                    <span className="contagem">{votantes.length} {votantes.length === 1 ? 'voto' : 'votos'}</span>
-                  </div>
-                  <div className="barra-bg">
-                    <div className={`barra${eVencedor ? ' vencedor' : ''}`} style={{ width: `${pct}%` }} />
-                  </div>
-                  <div className="votantes">
-                    {votantes.length === 0
-                      ? <span style={{ fontSize: 12, color: '#bbb' }}>Nenhum voto ainda</span>
-                      : votantes.map(v => <span className="votante" key={v.nome}>{v.nome}</span>)
-                    }
-                  </div>
-                </div>
-              )
-            })}
-
-            {horasOrdenadas.length > 0 && (
-              <>
-                <h2>🕐 Horários</h2>
-                {horasOrdenadas.map(([hora, votantes]) => {
-                  const eVencedor = votantes.length === maxHoras && votantes.length > 0
-                  const pct = maxHoras > 0 ? (votantes.length / maxHoras) * 100 : 0
-                  return (
-                    <div className="card" key={hora}>
-                      <div className="item-header">
-                        <span className={`item-nome${eVencedor ? ' vencedor' : ''}`}>
-                          {hora}
-                          {eVencedor && <span className="vencedor-badge">★ A ganhar</span>}
-                        </span>
-                        <span className="contagem">{votantes.length} {votantes.length === 1 ? 'voto' : 'votos'}</span>
-                      </div>
-                      <div className="barra-bg">
-                        <div className={`barra${eVencedor ? ' vencedor' : ''}`} style={{ width: `${pct}%` }} />
-                      </div>
-                      <div className="votantes">
-                        {votantes.length === 0
-                          ? <span style={{ fontSize: 12, color: '#bbb' }}>Nenhum voto ainda</span>
-                          : votantes.map(v => <span className="votante" key={v.nome}>{v.nome}</span>)
-                        }
-                      </div>
-                    </div>
-                  )
-                })}
-              </>
-            )}
+            {config && <Bloco titulo="Datas" icone="📅" itens={config.datas} votos={votos} campo="data" />}
+            {config?.horas?.length > 0 && <Bloco titulo="Horários" icone="🕐" itens={config.horas} votos={votos} campo="hora" />}
+            {config?.locais?.length > 0 && <Bloco titulo="Locais" icone="📍" itens={config.locais} votos={votos} campo="local" />}
 
             <a href="/" className="link-votar">← Voltar para votar</a>
           </>
