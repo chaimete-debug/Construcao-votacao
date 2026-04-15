@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
-    const { titulo, descricao, datas, horas, locais, senha } = req.body
+    const { titulo, descricao, datas, locais, senha } = req.body
 
     if (senha !== process.env.ADMIN_SENHA) {
       return res.status(401).json({ erro: 'Senha incorreta.' })
@@ -22,7 +22,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       titulo,
       descricao: descricao || '',
       datas,
-      horas: horas || [],
       locais: locais || [],
       ativa: true,
       criadaEm: new Date().toISOString(),
