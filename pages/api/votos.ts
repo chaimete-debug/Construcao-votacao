@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
-    const { nome, data } = req.body
+    const { nome, data, hora } = req.body
 
     if (!nome || !data) {
       return res.status(400).json({ erro: 'Nome e data são obrigatórios.' })
@@ -24,9 +24,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ erro: 'Data inválida.' })
     }
 
+    if (config.horas && config.horas.length > 0 && !config.horas.includes(hora)) {
+      return res.status(400).json({ erro: 'Hora inválida.' })
+    }
+
     const voto: Voto = {
       nome: nome.trim(),
       data,
+      hora: hora || '',
       timestamp: new Date().toISOString(),
     }
 
