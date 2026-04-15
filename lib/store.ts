@@ -1,10 +1,14 @@
 import { kv } from '@vercel/kv'
 
+export interface DataComHorarios {
+  data: string
+  horas: string[]
+}
+
 export interface VotacaoConfig {
   titulo: string
   descricao: string
-  datas: string[]
-  horas: string[]
+  datas: DataComHorarios[]
   locais: string[]
   ativa: boolean
   criadaEm: string
