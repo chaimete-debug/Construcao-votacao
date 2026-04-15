@@ -7,6 +7,7 @@ export default function Admin() {
   const [senha, setSenha] = useState('')
   const [datas, setDatas] = useState(['', ''])
   const [horas, setHoras] = useState([''])
+  const [locais, setLocais] = useState([''])
   const [estado, setEstado] = useState<'idle' | 'enviando' | 'sucesso' | 'erro'>('idle')
   const [mensagem, setMensagem] = useState('')
 
@@ -18,9 +19,14 @@ export default function Admin() {
   function removerHora(i: number) { setHoras(horas.filter((_, idx) => idx !== i)) }
   function atualizarHora(i: number, val: string) { const n = [...horas]; n[i] = val; setHoras(n) }
 
+  function adicionarLocal() { setLocais([...locais, '']) }
+  function removerLocal(i: number) { setLocais(locais.filter((_, idx) => idx !== i)) }
+  function atualizarLocal(i: number, val: string) { const n = [...locais]; n[i] = val; setLocais(n) }
+
   async function criar() {
     const datasValidas = datas.filter(d => d.trim() !== '')
     const horasValidas = horas.filter(h => h.trim() !== '')
+    const locaisValidos = locais.filter(l => l.trim() !== '')
     if (!titulo.trim() || datasValidas.length < 2 || !senha) {
       setEstado('erro')
       setMensagem('Preenche o título, a senha e pelo menos 2 datas.')
@@ -30,7 +36,7 @@ export default function Admin() {
     const res = await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ titulo, descricao, datas: datasValidas, horas: horasValidas, senha }),
+      body: JSON.stringify({ titulo, descricao, datas: datasValidas, horas: horasValidas, locais: locaisValidos, senha }),
     })
     const data = await res.json()
     if (data.ok) {
@@ -109,7 +115,7 @@ export default function Admin() {
           </div>
 
           <div className="campo">
-            <label>Horários disponíveis <span className="opcional">(opcional)</span></label>
+            <label>Horários <span className="opcional">(opcional)</span></label>
             {horas.map((h, i) => (
               <div className="row" key={i}>
                 <input type="time" value={h} onChange={e => atualizarHora(i, e.target.value)} />
@@ -117,7 +123,18 @@ export default function Admin() {
               </div>
             ))}
             <button className="btn-add" onClick={adicionarHora}>+ Adicionar outro horário</button>
-            <p className="hint">Se não adicionares horários, a votação será só por datas.</p>
+          </div>
+
+          <div className="campo">
+            <label>Locais <span className="opcional">(opcional)</span></label>
+            {locais.map((l, i) => (
+              <div className="row" key={i}>
+                <input type="text" placeholder="Ex: Sala de reuniões A, Casa do João..." value={l} onChange={e => atualizarLocal(i, e.target.value)} />
+                {locais.length > 1 && <button className="btn-remover" onClick={() => removerLocal(i)}>×</button>}
+              </div>
+            ))}
+            <button className="btn-add" onClick={adicionarLocal}>+ Adicionar outro local</button>
+            <p className="hint">Se não adicionares locais, a votação será só por datas e horários.</p>
           </div>
 
           <hr className="divider" />
