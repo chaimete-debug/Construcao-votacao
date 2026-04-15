@@ -5,6 +5,7 @@ interface Config {
   titulo: string
   descricao: string
   datas: string[]
+  horas: string[]
   ativa: boolean
 }
 
@@ -20,6 +21,7 @@ export default function Votar() {
   const [config, setConfig] = useState<Config | null>(null)
   const [nome, setNome] = useState('')
   const [dataSelecionada, setDataSelecionada] = useState('')
+  const [horaSelecionada, setHoraSelecionada] = useState('')
   const [estado, setEstado] = useState<'idle' | 'enviando' | 'sucesso' | 'erro'>('idle')
   const [mensagem, setMensagem] = useState('')
   const [carregando, setCarregando] = useState(true)
@@ -33,18 +35,20 @@ export default function Votar() {
       })
   }, [])
 
+  const temHoras = config?.horas && config.horas.length > 0
+  const podeVotar = nome.trim() && dataSelecionada && (!temHoras || horaSelecionada)
+
   async function votar() {
-    if (!nome.trim() || !dataSelecionada) return
+    if (!podeVotar) return
     setEstado('enviando')
     const res = await fetch('/api/votos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome: nome.trim(), data: dataSelecionada }),
+      body: JSON.stringify({ nome: nome.trim(), data: dataSelecionada, hora: horaSelecionada }),
     })
     const data = await res.json()
     if (data.ok) {
       setEstado('sucesso')
-      setMensagem('O teu voto foi registado!')
     } else {
       setEstado('erro')
       setMensagem(data.erro || 'Erro ao votar.')
@@ -60,31 +64,31 @@ export default function Votar() {
     label { display: block; font-size: 13px; font-weight: 500; color: #444; margin-bottom: 6px; }
     input[type=text] { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; transition: border 0.15s; }
     input[type=text]:focus { border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,0.15); }
-    .datas { display: grid; gap: 8px; margin: 1.5rem 0; }
-    .data-btn { background: white; border: 1.5px solid #e5e5e5; border-radius: 10px; padding: 14px 16px; cursor: pointer; text-align: left; transition: all 0.15s; display: flex; align-items: center; gap: 14px; }
-    .data-btn:hover { border-color: #7F77DD; background: #f8f7ff; }
-    .data-btn.selecionada { border-color: #7F77DD; background: #f8f7ff; }
+    .secao { margin-bottom: 1.5rem; }
+    .opcoes { display: grid; gap: 8px; margin-top: 8px; }
+    .opcao-btn { background: white; border: 1.5px solid #e5e5e5; border-radius: 10px; padding: 14px 16px; cursor: pointer; text-align: left; transition: all 0.15s; display: flex; align-items: center; gap: 14px; }
+    .opcao-btn:hover { border-color: #7F77DD; background: #f8f7ff; }
+    .opcao-btn.sel { border-color: #7F77DD; background: #f8f7ff; }
     .data-circulo { width: 44px; height: 44px; border-radius: 50%; background: #f0effc; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
-    .data-btn.selecionada .data-circulo { background: #7F77DD; }
+    .opcao-btn.sel .data-circulo { background: #7F77DD; }
     .dia-num { font-size: 18px; font-weight: 700; color: #7F77DD; line-height: 1; }
-    .data-btn.selecionada .dia-num { color: white; }
+    .opcao-btn.sel .dia-num { color: white; }
     .dia-mes { font-size: 10px; font-weight: 600; color: #7F77DD; text-transform: uppercase; }
-    .data-btn.selecionada .dia-mes { color: rgba(255,255,255,0.85); }
-    .data-info { flex: 1; }
-    .data-semana { font-size: 15px; font-weight: 500; color: #222; }
-    .data-completa { font-size: 12px; color: #888; margin-top: 1px; }
+    .opcao-btn.sel .dia-mes { color: rgba(255,255,255,0.85); }
+    .opcao-info { flex: 1; }
+    .opcao-titulo { font-size: 15px; font-weight: 500; color: #222; }
+    .opcao-sub { font-size: 12px; color: #888; margin-top: 1px; }
+    .hora-circulo { width: 44px; height: 44px; border-radius: 50%; background: #f0effc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-weight: 700; color: #7F77DD; }
+    .opcao-btn.sel .hora-circulo { background: #7F77DD; color: white; }
     .check { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #ddd; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .data-btn.selecionada .check { background: #7F77DD; border-color: #7F77DD; }
+    .opcao-btn.sel .check { background: #7F77DD; border-color: #7F77DD; }
     .check-inner { width: 8px; height: 8px; border-radius: 50%; background: white; display: none; }
-    .data-btn.selecionada .check-inner { display: block; }
+    .opcao-btn.sel .check-inner { display: block; }
     .btn-votar { width: 100%; padding: 13px; background: #7F77DD; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.15s; margin-top: 0.5rem; }
     .btn-votar:hover:not(:disabled) { background: #6b63cc; }
     .btn-votar:disabled { opacity: 0.6; cursor: default; }
-    .alerta { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-top: 1rem; }
-    .alerta-sucesso { background: #E1F5EE; color: #085041; }
-    .alerta-erro { background: #FCEBEB; color: #501313; }
+    .alerta-erro { background: #FCEBEB; color: #501313; padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-top: 1rem; }
     .link-resultados { display: block; text-align: center; margin-top: 1.5rem; font-size: 13px; color: #7F77DD; text-decoration: none; }
-    .link-resultados:hover { text-decoration: underline; }
     .loading { text-align: center; color: #888; font-size: 15px; padding: 3rem; }
     .inativa { text-align: center; padding: 2rem; color: #666; }
   `
@@ -116,64 +120,73 @@ export default function Votar() {
             <div style={{ fontSize: 56, marginBottom: '1rem' }}>✅</div>
             <h1 style={{ marginBottom: '0.5rem' }}>Voto registado!</h1>
             <p style={{ color: '#666', fontSize: 15 }}>Obrigado, <strong>{nome}</strong>. O teu voto foi guardado com sucesso.</p>
-            <a href="/resultados" className="link-resultados" style={{ marginTop: '2rem', display: 'inline-block' }}>Ver resultados da votação →</a>
+            <a href="/resultados" className="link-resultados" style={{ marginTop: '2rem', display: 'inline-block' }}>Ver resultados →</a>
           </div>
         ) : (
           <>
             <h1>{config.titulo}</h1>
             {config.descricao && <p className="desc">{config.descricao}</p>}
 
-            <div style={{ marginBottom: '1.5rem' }}>
+            <div className="secao">
               <label htmlFor="nome">O teu nome</label>
               <input
                 id="nome"
                 type="text"
-                placeholder="Ex: Maria Silva"
+                placeholder="Ex: Abel Deve"
                 value={nome}
                 onChange={e => setNome(e.target.value)}
                 disabled={estado === 'enviando'}
               />
             </div>
 
-            <label>Escolhe a data preferida</label>
-            <div className="datas">
-              {config.datas.map(d => {
-                const f = formatarData(d)
-                const sel = dataSelecionada === d
-                return (
-                  <button
-                    key={d}
-                    className={`data-btn${sel ? ' selecionada' : ''}`}
-                    onClick={() => setDataSelecionada(d)}
-                    disabled={estado === 'enviando'}
-                  >
-                    <div className="data-circulo">
-                      <span className="dia-num">{f.dia}</span>
-                      <span className="dia-mes">{f.mesNome}</span>
-                    </div>
-                    <div className="data-info">
-                      <div className="data-semana">{f.diaSemana}feira</div>
-                      <div className="data-completa">{f.dia} de {f.mesNome} de {f.ano}</div>
-                    </div>
-                    <div className="check">
-                      <div className="check-inner" />
-                    </div>
-                  </button>
-                )
-              })}
+            <div className="secao">
+              <label>Escolhe a data preferida</label>
+              <div className="opcoes">
+                {config.datas.map(d => {
+                  const f = formatarData(d)
+                  const sel = dataSelecionada === d
+                  return (
+                    <button key={d} className={`opcao-btn${sel ? ' sel' : ''}`} onClick={() => setDataSelecionada(d)} disabled={estado === 'enviando'}>
+                      <div className="data-circulo">
+                        <span className="dia-num">{f.dia}</span>
+                        <span className="dia-mes">{f.mesNome}</span>
+                      </div>
+                      <div className="opcao-info">
+                        <div className="opcao-titulo">{f.diaSemana}feira</div>
+                        <div className="opcao-sub">{f.dia} de {f.mesNome} de {f.ano}</div>
+                      </div>
+                      <div className="check"><div className="check-inner" /></div>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
-            <button
-              className="btn-votar"
-              onClick={votar}
-              disabled={!nome.trim() || !dataSelecionada || estado === 'enviando'}
-            >
+            {temHoras && (
+              <div className="secao">
+                <label>Escolhe o horário preferido</label>
+                <div className="opcoes">
+                  {config.horas.map(h => {
+                    const sel = horaSelecionada === h
+                    return (
+                      <button key={h} className={`opcao-btn${sel ? ' sel' : ''}`} onClick={() => setHoraSelecionada(h)} disabled={estado === 'enviando'}>
+                        <div className="hora-circulo">🕐</div>
+                        <div className="opcao-info">
+                          <div className="opcao-titulo">{h}</div>
+                        </div>
+                        <div className="check"><div className="check-inner" /></div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            <button className="btn-votar" onClick={votar} disabled={!podeVotar || estado === 'enviando'}>
               {estado === 'enviando' ? 'A votar...' : 'Confirmar voto'}
             </button>
 
-            {estado === 'erro' && (
-              <div className="alerta alerta-erro">{mensagem}</div>
-            )}
+            {estado === 'erro' && <div className="alerta-erro">{mensagem}</div>}
 
             <a href="/resultados" className="link-resultados">Ver resultados →</a>
           </>
