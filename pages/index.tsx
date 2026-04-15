@@ -6,6 +6,7 @@ interface Config {
   descricao: string
   datas: string[]
   horas: string[]
+  locais: string[]
   ativa: boolean
 }
 
@@ -22,6 +23,7 @@ export default function Votar() {
   const [nome, setNome] = useState('')
   const [dataSelecionada, setDataSelecionada] = useState('')
   const [horaSelecionada, setHoraSelecionada] = useState('')
+  const [localSelecionado, setLocalSelecionado] = useState('')
   const [estado, setEstado] = useState<'idle' | 'enviando' | 'sucesso' | 'erro'>('idle')
   const [mensagem, setMensagem] = useState('')
   const [carregando, setCarregando] = useState(true)
@@ -29,14 +31,14 @@ export default function Votar() {
   useEffect(() => {
     fetch('/api/config')
       .then(r => r.json())
-      .then(d => {
-        setConfig(d.config)
-        setCarregando(false)
-      })
+      .then(d => { setConfig(d.config); setCarregando(false) })
   }, [])
 
   const temHoras = config?.horas && config.horas.length > 0
-  const podeVotar = nome.trim() && dataSelecionada && (!temHoras || horaSelecionada)
+  const temLocais = config?.locais && config.locais.length > 0
+  const podeVotar = nome.trim() && dataSelecionada &&
+    (!temHoras || horaSelecionada) &&
+    (!temLocais || localSelecionado)
 
   async function votar() {
     if (!podeVotar) return
@@ -44,7 +46,7 @@ export default function Votar() {
     const res = await fetch('/api/votos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome: nome.trim(), data: dataSelecionada, hora: horaSelecionada }),
+      body: JSON.stringify({ nome: nome.trim(), data: dataSelecionada, hora: horaSelecionada, local: localSelecionado }),
     })
     const data = await res.json()
     if (data.ok) {
@@ -66,11 +68,11 @@ export default function Votar() {
     input[type=text]:focus { border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,0.15); }
     .secao { margin-bottom: 1.5rem; }
     .opcoes { display: grid; gap: 8px; margin-top: 8px; }
-    .opcao-btn { background: white; border: 1.5px solid #e5e5e5; border-radius: 10px; padding: 14px 16px; cursor: pointer; text-align: left; transition: all 0.15s; display: flex; align-items: center; gap: 14px; }
+    .opcao-btn { background: white; border: 1.5px solid #e5e5e5; border-radius: 10px; padding: 14px 16px; cursor: pointer; text-align: left; transition: all 0.15s; display: flex; align-items: center; gap: 14px; width: 100%; }
     .opcao-btn:hover { border-color: #7F77DD; background: #f8f7ff; }
     .opcao-btn.sel { border-color: #7F77DD; background: #f8f7ff; }
-    .data-circulo { width: 44px; height: 44px; border-radius: 50%; background: #f0effc; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
-    .opcao-btn.sel .data-circulo { background: #7F77DD; }
+    .icone-circulo { width: 44px; height: 44px; border-radius: 50%; background: #f0effc; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-weight: 700; color: #7F77DD; }
+    .opcao-btn.sel .icone-circulo { background: #7F77DD; color: white; }
     .dia-num { font-size: 18px; font-weight: 700; color: #7F77DD; line-height: 1; }
     .opcao-btn.sel .dia-num { color: white; }
     .dia-mes { font-size: 10px; font-weight: 600; color: #7F77DD; text-transform: uppercase; }
@@ -78,8 +80,6 @@ export default function Votar() {
     .opcao-info { flex: 1; }
     .opcao-titulo { font-size: 15px; font-weight: 500; color: #222; }
     .opcao-sub { font-size: 12px; color: #888; margin-top: 1px; }
-    .hora-circulo { width: 44px; height: 44px; border-radius: 50%; background: #f0effc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-weight: 700; color: #7F77DD; }
-    .opcao-btn.sel .hora-circulo { background: #7F77DD; color: white; }
     .check { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #ddd; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .opcao-btn.sel .check { background: #7F77DD; border-color: #7F77DD; }
     .check-inner { width: 8px; height: 8px; border-radius: 50%; background: white; display: none; }
@@ -119,7 +119,7 @@ export default function Votar() {
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
             <div style={{ fontSize: 56, marginBottom: '1rem' }}>✅</div>
             <h1 style={{ marginBottom: '0.5rem' }}>Voto registado!</h1>
-            <p style={{ color: '#666', fontSize: 15 }}>Obrigado, <strong>{nome}</strong>. O teu voto foi guardado com sucesso.</p>
+            <p style={{ color: '#666', fontSize: 15 }}>Obrigado, <strong>{nome}</strong>. O teu voto foi guardado.</p>
             <a href="/resultados" className="link-resultados" style={{ marginTop: '2rem', display: 'inline-block' }}>Ver resultados →</a>
           </div>
         ) : (
@@ -129,14 +129,7 @@ export default function Votar() {
 
             <div className="secao">
               <label htmlFor="nome">O teu nome</label>
-              <input
-                id="nome"
-                type="text"
-                placeholder="Ex: Abel Deve"
-                value={nome}
-                onChange={e => setNome(e.target.value)}
-                disabled={estado === 'enviando'}
-              />
+              <input id="nome" type="text" placeholder="Ex: Abel Deve" value={nome} onChange={e => setNome(e.target.value)} disabled={estado === 'enviando'} />
             </div>
 
             <div className="secao">
@@ -147,7 +140,7 @@ export default function Votar() {
                   const sel = dataSelecionada === d
                   return (
                     <button key={d} className={`opcao-btn${sel ? ' sel' : ''}`} onClick={() => setDataSelecionada(d)} disabled={estado === 'enviando'}>
-                      <div className="data-circulo">
+                      <div className="icone-circulo">
                         <span className="dia-num">{f.dia}</span>
                         <span className="dia-mes">{f.mesNome}</span>
                       </div>
@@ -166,18 +159,32 @@ export default function Votar() {
               <div className="secao">
                 <label>Escolhe o horário preferido</label>
                 <div className="opcoes">
-                  {config.horas.map(h => {
-                    const sel = horaSelecionada === h
-                    return (
-                      <button key={h} className={`opcao-btn${sel ? ' sel' : ''}`} onClick={() => setHoraSelecionada(h)} disabled={estado === 'enviando'}>
-                        <div className="hora-circulo">🕐</div>
-                        <div className="opcao-info">
-                          <div className="opcao-titulo">{h}</div>
-                        </div>
-                        <div className="check"><div className="check-inner" /></div>
-                      </button>
-                    )
-                  })}
+                  {config.horas.map(h => (
+                    <button key={h} className={`opcao-btn${horaSelecionada === h ? ' sel' : ''}`} onClick={() => setHoraSelecionada(h)} disabled={estado === 'enviando'}>
+                      <div className="icone-circulo">🕐</div>
+                      <div className="opcao-info">
+                        <div className="opcao-titulo">{h}</div>
+                      </div>
+                      <div className="check"><div className="check-inner" /></div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {temLocais && (
+              <div className="secao">
+                <label>Escolhe o local preferido</label>
+                <div className="opcoes">
+                  {config.locais.map(l => (
+                    <button key={l} className={`opcao-btn${localSelecionado === l ? ' sel' : ''}`} onClick={() => setLocalSelecionado(l)} disabled={estado === 'enviando'}>
+                      <div className="icone-circulo">📍</div>
+                      <div className="opcao-info">
+                        <div className="opcao-titulo">{l}</div>
+                      </div>
+                      <div className="check"><div className="check-inner" /></div>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -187,7 +194,6 @@ export default function Votar() {
             </button>
 
             {estado === 'erro' && <div className="alerta-erro">{mensagem}</div>}
-
             <a href="/resultados" className="link-resultados">Ver resultados →</a>
           </>
         )}
