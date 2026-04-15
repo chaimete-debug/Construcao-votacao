@@ -1,42 +1,78 @@
 import { useState } from 'react'
 import Head from 'next/head'
 
+interface DataComHorarios {
+  data: string
+  horas: string[]
+}
+
 export default function Admin() {
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
   const [senha, setSenha] = useState('')
-  const [datas, setDatas] = useState(['', ''])
-  const [horas, setHoras] = useState([''])
+  const [datas, setDatas] = useState<DataComHorarios[]>([
+    { data: '', horas: [''] },
+    { data: '', horas: [''] },
+  ])
   const [locais, setLocais] = useState([''])
   const [estado, setEstado] = useState<'idle' | 'enviando' | 'sucesso' | 'erro'>('idle')
   const [mensagem, setMensagem] = useState('')
 
-  function adicionarData() { setDatas([...datas, '']) }
-  function removerData(i: number) { setDatas(datas.filter((_, idx) => idx !== i)) }
-  function atualizarData(i: number, val: string) { const n = [...datas]; n[i] = val; setDatas(n) }
+  function adicionarData() {
+    setDatas([...datas, { data: '', horas: [''] }])
+  }
 
-  function adicionarHora() { setHoras([...horas, '']) }
-  function removerHora(i: number) { setHoras(horas.filter((_, idx) => idx !== i)) }
-  function atualizarHora(i: number, val: string) { const n = [...horas]; n[i] = val; setHoras(n) }
+  function removerData(i: number) {
+    setDatas(datas.filter((_, idx) => idx !== i))
+  }
+
+  function atualizarData(i: number, val: string) {
+    const n = [...datas]
+    n[i] = { ...n[i], data: val }
+    setDatas(n)
+  }
+
+  function adicionarHora(dataIdx: number) {
+    const n = [...datas]
+    n[dataIdx] = { ...n[dataIdx], horas: [...n[dataIdx].horas, ''] }
+    setDatas(n)
+  }
+
+  function removerHora(dataIdx: number, horaIdx: number) {
+    const n = [...datas]
+    n[dataIdx] = { ...n[dataIdx], horas: n[dataIdx].horas.filter((_, idx) => idx !== horaIdx) }
+    setDatas(n)
+  }
+
+  function atualizarHora(dataIdx: number, horaIdx: number, val: string) {
+    const n = [...datas]
+    const horas = [...n[dataIdx].horas]
+    horas[horaIdx] = val
+    n[dataIdx] = { ...n[dataIdx], horas }
+    setDatas(n)
+  }
 
   function adicionarLocal() { setLocais([...locais, '']) }
   function removerLocal(i: number) { setLocais(locais.filter((_, idx) => idx !== i)) }
   function atualizarLocal(i: number, val: string) { const n = [...locais]; n[i] = val; setLocais(n) }
 
   async function criar() {
-    const datasValidas = datas.filter(d => d.trim() !== '')
-    const horasValidas = horas.filter(h => h.trim() !== '')
+    const datasValidas = datas
+      .filter(d => d.data.trim() !== '')
+      .map(d => ({ data: d.data, horas: d.horas.filter(h => h.trim() !== '') }))
     const locaisValidos = locais.filter(l => l.trim() !== '')
+
     if (!titulo.trim() || datasValidas.length < 2 || !senha) {
       setEstado('erro')
       setMensagem('Preenche o título, a senha e pelo menos 2 datas.')
       return
     }
+
     setEstado('enviando')
     const res = await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ titulo, descricao, datas: datasValidas, horas: horasValidas, locais: locaisValidos, senha }),
+      body: JSON.stringify({ titulo, descricao, datas: datasValidas, locais: locaisValidos, senha }),
     })
     const data = await res.json()
     if (data.ok) {
@@ -60,10 +96,17 @@ export default function Admin() {
     input[type=text], input[type=password], input[type=date], input[type=time], textarea { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; font-family: inherit; transition: border 0.15s; }
     input:focus, textarea:focus { border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,0.15); }
     textarea { resize: vertical; min-height: 72px; }
-    .row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .data-bloco { background: #fafafa; border: 1px solid #efefef; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+    .data-bloco-header { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .data-bloco-header input { flex: 1; }
+    .horas-section { padding-left: 8px; border-left: 2px solid #e5e5e5; margin-top: 8px; }
+    .horas-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+    .row { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; }
     .row input { flex: 1; }
-    .btn-remover { background: none; border: 1px solid #ddd; border-radius: 6px; width: 32px; height: 38px; cursor: pointer; color: #999; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .btn-remover { background: none; border: 1px solid #ddd; border-radius: 6px; width: 32px; height: 36px; cursor: pointer; color: #999; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .btn-remover:hover { background: #fff0f0; border-color: #f5c0c0; color: #c00; }
+    .btn-add-hora { background: none; border: 1px dashed #ccc; border-radius: 6px; padding: 5px 10px; font-size: 12px; color: #888; cursor: pointer; margin-top: 2px; }
+    .btn-add-hora:hover { background: #f8f8f8; }
     .btn-add { background: none; border: 1px dashed #ccc; border-radius: 8px; padding: 8px 14px; font-size: 13px; color: #888; cursor: pointer; width: 100%; margin-top: 4px; }
     .btn-add:hover { background: #f8f8f8; }
     .btn-criar { width: 100%; padding: 13px; background: #7F77DD; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 1.5rem; transition: background 0.15s; }
@@ -104,25 +147,41 @@ export default function Admin() {
           <hr className="divider" />
 
           <div className="campo">
-            <label>Datas disponíveis <span className="opcional">(mínimo 2)</span></label>
-            {datas.map((d, i) => (
-              <div className="row" key={i}>
-                <input type="date" value={d} onChange={e => atualizarData(i, e.target.value)} />
-                {datas.length > 2 && <button className="btn-remover" onClick={() => removerData(i)}>×</button>}
+            <label>Datas e horários <span className="opcional">(mínimo 2 datas)</span></label>
+            {datas.map((d, dataIdx) => (
+              <div className="data-bloco" key={dataIdx}>
+                <div className="data-bloco-header">
+                  <input
+                    type="date"
+                    value={d.data}
+                    onChange={e => atualizarData(dataIdx, e.target.value)}
+                  />
+                  {datas.length > 2 && (
+                    <button className="btn-remover" onClick={() => removerData(dataIdx)}>×</button>
+                  )}
+                </div>
+
+                <div className="horas-section">
+                  <div className="horas-label">Horários para este dia <span className="opcional">(opcional)</span></div>
+                  {d.horas.map((h, horaIdx) => (
+                    <div className="row" key={horaIdx}>
+                      <input
+                        type="time"
+                        value={h}
+                        onChange={e => atualizarHora(dataIdx, horaIdx, e.target.value)}
+                      />
+                      {d.horas.length > 1 && (
+                        <button className="btn-remover" onClick={() => removerHora(dataIdx, horaIdx)}>×</button>
+                      )}
+                    </div>
+                  ))}
+                  <button className="btn-add-hora" onClick={() => adicionarHora(dataIdx)}>
+                    + horário
+                  </button>
+                </div>
               </div>
             ))}
             <button className="btn-add" onClick={adicionarData}>+ Adicionar outra data</button>
-          </div>
-
-          <div className="campo">
-            <label>Horários <span className="opcional">(opcional)</span></label>
-            {horas.map((h, i) => (
-              <div className="row" key={i}>
-                <input type="time" value={h} onChange={e => atualizarHora(i, e.target.value)} />
-                {horas.length > 1 && <button className="btn-remover" onClick={() => removerHora(i)}>×</button>}
-              </div>
-            ))}
-            <button className="btn-add" onClick={adicionarHora}>+ Adicionar outro horário</button>
           </div>
 
           <div className="campo">
