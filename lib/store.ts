@@ -5,6 +5,7 @@ export interface VotacaoConfig {
   descricao: string
   datas: string[]
   horas: string[]
+  locais: string[]
   ativa: boolean
   criadaEm: string
 }
@@ -13,6 +14,7 @@ export interface Voto {
   nome: string
   data: string
   hora: string
+  local: string
   timestamp: string
 }
 
