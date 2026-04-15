@@ -20,12 +20,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ erro: 'Votação não está ativa.' })
     }
 
-    if (!config.datas.includes(data)) {
+    const dataConfig = config.datas.find(d => d.data === data)
+    if (!dataConfig) {
       return res.status(400).json({ erro: 'Data inválida.' })
     }
 
-    if (config.horas?.length > 0 && !config.horas.includes(hora)) {
-      return res.status(400).json({ erro: 'Hora inválida.' })
+    if (dataConfig.horas.length > 0 && !dataConfig.horas.includes(hora)) {
+      return res.status(400).json({ erro: 'Hora inválida para esta data.' })
     }
 
     if (config.locais?.length > 0 && !config.locais.includes(local)) {
