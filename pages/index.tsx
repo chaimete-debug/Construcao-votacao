@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
 
+interface DataComHorarios {
+  data: string
+  horas: string[]
+}
+
 interface Config {
   titulo: string
   descricao: string
-  datas: string[]
-  horas: string[]
+  datas: DataComHorarios[]
   locais: string[]
   ativa: boolean
 }
@@ -34,11 +38,18 @@ export default function Votar() {
       .then(d => { setConfig(d.config); setCarregando(false) })
   }, [])
 
-  const temHoras = config?.horas && config.horas.length > 0
+  const dataConfig = config?.datas.find(d => d.data === dataSelecionada)
+  const horasDisponiveis = dataConfig?.horas || []
+  const temHoras = horasDisponiveis.length > 0
   const temLocais = config?.locais && config.locais.length > 0
   const podeVotar = nome.trim() && dataSelecionada &&
     (!temHoras || horaSelecionada) &&
     (!temLocais || localSelecionado)
+
+  function selecionarData(data: string) {
+    setDataSelecionada(data)
+    setHoraSelecionada('')
+  }
 
   async function votar() {
     if (!podeVotar) return
@@ -71,12 +82,15 @@ export default function Votar() {
     .opcao-btn { background: white; border: 1.5px solid #e5e5e5; border-radius: 10px; padding: 14px 16px; cursor: pointer; text-align: left; transition: all 0.15s; display: flex; align-items: center; gap: 14px; width: 100%; }
     .opcao-btn:hover { border-color: #7F77DD; background: #f8f7ff; }
     .opcao-btn.sel { border-color: #7F77DD; background: #f8f7ff; }
-    .icone-circulo { width: 44px; height: 44px; border-radius: 50%; background: #f0effc; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-weight: 700; color: #7F77DD; }
-    .opcao-btn.sel .icone-circulo { background: #7F77DD; color: white; }
+    .opcao-btn:disabled { opacity: 0.5; cursor: default; }
+    .icone-circulo { width: 44px; height: 44px; border-radius: 50%; background: #f0effc; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
+    .opcao-btn.sel .icone-circulo { background: #7F77DD; }
     .dia-num { font-size: 18px; font-weight: 700; color: #7F77DD; line-height: 1; }
     .opcao-btn.sel .dia-num { color: white; }
     .dia-mes { font-size: 10px; font-weight: 600; color: #7F77DD; text-transform: uppercase; }
     .opcao-btn.sel .dia-mes { color: rgba(255,255,255,0.85); }
+    .icone-txt { font-size: 13px; font-weight: 700; color: #7F77DD; }
+    .opcao-btn.sel .icone-txt { color: white; }
     .opcao-info { flex: 1; }
     .opcao-titulo { font-size: 15px; font-weight: 500; color: #222; }
     .opcao-sub { font-size: 12px; color: #888; margin-top: 1px; }
@@ -84,6 +98,12 @@ export default function Votar() {
     .opcao-btn.sel .check { background: #7F77DD; border-color: #7F77DD; }
     .check-inner { width: 8px; height: 8px; border-radius: 50%; background: white; display: none; }
     .opcao-btn.sel .check-inner { display: block; }
+    .horas-container { margin-top: 8px; background: #fafafa; border-radius: 10px; padding: 12px; border: 1px solid #f0f0f0; }
+    .horas-label { font-size: 12px; color: #888; margin-bottom: 8px; }
+    .horas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
+    .hora-btn { padding: 8px 12px; border: 1.5px solid #e5e5e5; border-radius: 8px; background: white; font-size: 14px; font-weight: 500; color: #444; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .hora-btn:hover { border-color: #7F77DD; color: #7F77DD; }
+    .hora-btn.sel { border-color: #7F77DD; background: #7F77DD; color: white; }
     .btn-votar { width: 100%; padding: 13px; background: #7F77DD; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.15s; margin-top: 0.5rem; }
     .btn-votar:hover:not(:disabled) { background: #6b63cc; }
     .btn-votar:disabled { opacity: 0.6; cursor: default; }
@@ -135,42 +155,48 @@ export default function Votar() {
             <div className="secao">
               <label>Escolhe a data preferida</label>
               <div className="opcoes">
-                {config.datas.map(d => {
-                  const f = formatarData(d)
-                  const sel = dataSelecionada === d
+                {config.datas.map(({ data, horas }) => {
+                  const f = formatarData(data)
+                  const sel = dataSelecionada === data
                   return (
-                    <button key={d} className={`opcao-btn${sel ? ' sel' : ''}`} onClick={() => setDataSelecionada(d)} disabled={estado === 'enviando'}>
-                      <div className="icone-circulo">
-                        <span className="dia-num">{f.dia}</span>
-                        <span className="dia-mes">{f.mesNome}</span>
-                      </div>
-                      <div className="opcao-info">
-                        <div className="opcao-titulo">{f.diaSemana}feira</div>
-                        <div className="opcao-sub">{f.dia} de {f.mesNome} de {f.ano}</div>
-                      </div>
-                      <div className="check"><div className="check-inner" /></div>
-                    </button>
+                    <div key={data}>
+                      <button className={`opcao-btn${sel ? ' sel' : ''}`} onClick={() => selecionarData(data)} disabled={estado === 'enviando'}>
+                        <div className="icone-circulo">
+                          <span className="dia-num">{f.dia}</span>
+                          <span className="dia-mes">{f.mesNome}</span>
+                        </div>
+                        <div className="opcao-info">
+                          <div className="opcao-titulo">{f.diaSemana}feira</div>
+                          <div className="opcao-sub">
+                            {f.dia} de {f.mesNome} de {f.ano}
+                            {horas.length > 0 && ` · ${horas.length} horário${horas.length > 1 ? 's' : ''}`}
+                          </div>
+                        </div>
+                        <div className="check"><div className="check-inner" /></div>
+                      </button>
+
+                      {sel && horas.length > 0 && (
+                        <div className="horas-container">
+                          <div className="horas-label">Escolhe o horário para este dia:</div>
+                          <div className="horas-grid">
+                            {horas.map(h => (
+                              <button
+                                key={h}
+                                className={`hora-btn${horaSelecionada === h ? ' sel' : ''}`}
+                                onClick={() => setHoraSelecionada(h)}
+                                disabled={estado === 'enviando'}
+                              >
+                                {h}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )
                 })}
               </div>
             </div>
-
-            {temHoras && (
-              <div className="secao">
-                <label>Escolhe o horário preferido</label>
-                <div className="opcoes">
-                  {config.horas.map(h => (
-                    <button key={h} className={`opcao-btn${horaSelecionada === h ? ' sel' : ''}`} onClick={() => setHoraSelecionada(h)} disabled={estado === 'enviando'}>
-                      <div className="icone-circulo">🕐</div>
-                      <div className="opcao-info">
-                        <div className="opcao-titulo">{h}</div>
-                      </div>
-                      <div className="check"><div className="check-inner" /></div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {temLocais && (
               <div className="secao">
@@ -178,7 +204,7 @@ export default function Votar() {
                 <div className="opcoes">
                   {config.locais.map(l => (
                     <button key={l} className={`opcao-btn${localSelecionado === l ? ' sel' : ''}`} onClick={() => setLocalSelecionado(l)} disabled={estado === 'enviando'}>
-                      <div className="icone-circulo">📍</div>
+                      <div className="icone-circulo"><span className="icone-txt">📍</span></div>
                       <div className="opcao-info">
                         <div className="opcao-titulo">{l}</div>
                       </div>
