@@ -4,12 +4,14 @@ import Head from 'next/head'
 interface Voto {
   nome: string
   data: string
+  hora: string
   timestamp: string
 }
 
 interface Config {
   titulo: string
   datas: string[]
+  horas: string[]
 }
 
 function formatarData(iso: string) {
@@ -41,27 +43,34 @@ export default function Resultados() {
     return () => clearInterval(t)
   }, [])
 
-  const contagem: Record<string, Voto[]> = {}
+  const contagemDatas: Record<string, Voto[]> = {}
   if (config) {
-    config.datas.forEach(d => { contagem[d] = [] })
-    votos.forEach(v => {
-      if (contagem[v.data]) contagem[v.data].push(v)
-    })
+    config.datas.forEach(d => { contagemDatas[d] = [] })
+    votos.forEach(v => { if (contagemDatas[v.data]) contagemDatas[v.data].push(v) })
   }
 
-  const max = Math.max(...Object.values(contagem).map(v => v.length), 1)
-  const datas = config ? Object.entries(contagem).sort((a, b) => b[1].length - a[1].length) : []
+  const contagemHoras: Record<string, Voto[]> = {}
+  if (config?.horas?.length) {
+    config.horas.forEach(h => { contagemHoras[h] = [] })
+    votos.forEach(v => { if (v.hora && contagemHoras[v.hora]) contagemHoras[v.hora].push(v) })
+  }
+
+  const maxDatas = Math.max(...Object.values(contagemDatas).map(v => v.length), 1)
+  const maxHoras = Math.max(...Object.values(contagemHoras).map(v => v.length), 1)
+  const datasOrdenadas = config ? Object.entries(contagemDatas).sort((a, b) => b[1].length - a[1].length) : []
+  const horasOrdenadas = config?.horas?.length ? Object.entries(contagemHoras).sort((a, b) => b[1].length - a[1].length) : []
 
   const estilos = `
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; padding: 1.5rem 1rem; }
     .container { max-width: 520px; margin: 0 auto; }
     h1 { font-size: 22px; font-weight: 600; color: #111; margin-bottom: 0.25rem; }
+    h2 { font-size: 16px; font-weight: 600; color: #333; margin: 1.5rem 0 0.75rem; }
     .subtitulo { font-size: 14px; color: #888; margin-bottom: 2rem; }
     .card { background: white; border-radius: 14px; padding: 1.5rem; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
-    .data-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .data-nome { font-size: 15px; font-weight: 500; color: #222; }
-    .data-nome.vencedor { color: #7F77DD; }
+    .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .item-nome { font-size: 15px; font-weight: 500; color: #222; }
+    .item-nome.vencedor { color: #7F77DD; }
     .contagem { font-size: 13px; color: #888; }
     .barra-bg { background: #f0f0f0; border-radius: 6px; height: 8px; overflow: hidden; margin-bottom: 10px; }
     .barra { height: 100%; background: #c5c2ef; border-radius: 6px; transition: width 0.5s ease; }
@@ -92,7 +101,7 @@ export default function Resultados() {
         ) : (
           <>
             <h1>{config?.titulo}</h1>
-            <p className="subtitulo">Resultados da votação • atualiza a cada 10s</p>
+            <p className="subtitulo">Resultados em tempo real • atualiza a cada 10s</p>
 
             <div className="total">
               <div>
@@ -107,13 +116,14 @@ export default function Resultados() {
 
             <button className="btn-atualizar" onClick={carregar}>↻ Atualizar agora</button>
 
-            {datas.map(([data, votantes]) => {
-              const eVencedor = votantes.length === max && votantes.length > 0
-              const pct = max > 0 ? (votantes.length / max) * 100 : 0
+            <h2>📅 Datas</h2>
+            {datasOrdenadas.map(([data, votantes]) => {
+              const eVencedor = votantes.length === maxDatas && votantes.length > 0
+              const pct = maxDatas > 0 ? (votantes.length / maxDatas) * 100 : 0
               return (
                 <div className="card" key={data}>
-                  <div className="data-header">
-                    <span className={`data-nome${eVencedor ? ' vencedor' : ''}`}>
+                  <div className="item-header">
+                    <span className={`item-nome${eVencedor ? ' vencedor' : ''}`}>
                       {formatarData(data)}
                       {eVencedor && <span className="vencedor-badge">★ A ganhar</span>}
                     </span>
@@ -131,6 +141,36 @@ export default function Resultados() {
                 </div>
               )
             })}
+
+            {horasOrdenadas.length > 0 && (
+              <>
+                <h2>🕐 Horários</h2>
+                {horasOrdenadas.map(([hora, votantes]) => {
+                  const eVencedor = votantes.length === maxHoras && votantes.length > 0
+                  const pct = maxHoras > 0 ? (votantes.length / maxHoras) * 100 : 0
+                  return (
+                    <div className="card" key={hora}>
+                      <div className="item-header">
+                        <span className={`item-nome${eVencedor ? ' vencedor' : ''}`}>
+                          {hora}
+                          {eVencedor && <span className="vencedor-badge">★ A ganhar</span>}
+                        </span>
+                        <span className="contagem">{votantes.length} {votantes.length === 1 ? 'voto' : 'votos'}</span>
+                      </div>
+                      <div className="barra-bg">
+                        <div className={`barra${eVencedor ? ' vencedor' : ''}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="votantes">
+                        {votantes.length === 0
+                          ? <span style={{ fontSize: 12, color: '#bbb' }}>Nenhum voto ainda</span>
+                          : votantes.map(v => <span className="votante" key={v.nome}>{v.nome}</span>)
+                        }
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            )}
 
             <a href="/" className="link-votar">← Voltar para votar</a>
           </>
