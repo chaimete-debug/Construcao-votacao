@@ -9,6 +9,7 @@ App simples para o teu grupo votar no melhor dia para uma reunião.
 3. **Membros** acedem e votam com o nome + data preferida
 4. **Resultados** visíveis em tempo real em `/resultados`
 
+
 ---
 
 ## Deploy no Vercel (passo a passo)
